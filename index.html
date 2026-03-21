@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>阿嬤溝通板-穩定語音版</title>
+    <style>
+        :root { --yes-color: #28a745; --no-color: #dc3545; }
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; font-family: sans-serif; overflow: hidden; background: #f0f2f5; }
+        #setup-zone { padding: 20px; display: flex; flex-direction: column; gap: 15px; height: 100vh; box-sizing: border-box; justify-content: center; max-width: 600px; margin: 0 auto; }
+        .input-group { display: flex; flex-direction: column; gap: 5px; }
+        label { font-size: 1.2rem; font-weight: bold; }
+        input { padding: 12px; font-size: 1.5rem; border: 2px solid #6f42c1; border-radius: 8px; }
+        .btn-row { display: flex; gap: 10px; margin-top: 10px; }
+        button { padding: 15px; font-size: 1.2rem; border-radius: 10px; border: none; cursor: pointer; font-weight: bold; }
+        #test-btn { background: #6c757d; color: white; flex: 1; }
+        #start-btn { background: #6f42c1; color: white; flex: 2; }
+        
+        #interface { display: none; height: 100vh; width: 100vw; position: fixed; top: 0; left: 0; z-index: 100; }
+        .btn-half { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 12vw; font-weight: bold; color: white; text-align: center; }
+        #left-side { background-color: var(--yes-color); border-right: 6px solid white; }
+        #right-side { background-color: var(--no-color); }
+        .back-btn { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); padding: 10px 30px; background: rgba(0,0,0,0.5); color: white; border-radius: 30px; z-index: 101; }
+    </style>
+</head>
+<body>
+
+    <div id="setup-zone">
+        <h2 style="text-align:center;">設定溝通內容</h2>
+        <div class="input-group">
+            <label>問題：</label>
+            <input type="text" id="q-input" value="阿嬤，你要喝水嗎？">
+        </div>
+        <div class="btn-row">
+            <div class="input-group" style="flex:1;">
+                <label>左邊 (是)：</label>
+                <input type="text" id="l-input" value="要喝">
+            </div>
+            <div class="input-group" style="flex:1;">
+                <label>右邊 (否)：</label>
+                <input type="text" id="r-input" value="不喝">
+            </div>
+        </div>
+        <div class="btn-row">
+            <button id="test-btn" onclick="testVoice()">先試聽聲音</button>
+            <button id="start-btn" onclick="applySettings()">進入溝通模式</button>
+        </div>
+        <p style="font-size: 0.9rem; color: #666; text-align: center;">若沒聲音，請確認平板沒靜音且音量已開啟</p>
+    </div>
+
+    <div id="interface">
+        <button class="back-btn" onclick="exitInterface()">⬅ 返回</button>
+        <div style="display: flex; height: 100%;">
+            <div id="left-side" class="btn-half" onclick="speakText('left')"><span id="left-text"></span></div>
+            <div id="right-side" class="btn-half" onclick="speakText('right')"><span id="right-text"></span></div>
+        </div>
+    </div>
+
+    <script>
+        let qVal, lVal, rVal;
+
+        function speak(text) {
+            if (!text) return;
+            window.speechSynthesis.cancel(); // 先停止之前的聲音
+            const utter = new SpeechSynthesisUtterance(text);
+            
+            // 嘗試尋找最像客語或台語的發音包（通常是 zh-TW 或 zh-HK）
+            utter.lang = 'zh-TW'; 
+            utter.rate = 0.7;  // 速度放慢一點，長輩比較容易聽懂
+            utter.pitch = 1.0; // 音調正常
+            
+            window.speechSynthesis.speak(utter);
+        }
+
+        function testVoice() {
+            const q = document.getElementById('q-input').value;
+            if(!q) alert("請先輸入文字");
+            speak(q);
+        }
+
+        function applySettings() {
+            qVal = document.getElementById('q-input').value;
+            lVal = document.getElementById('l-input').value;
+            rVal = document.getElementById('r-input').value;
+
+            document.getElementById('left-text').innerText = lVal;
+            document.getElementById('right-text').innerText = rVal;
+            document.getElementById('setup-zone').style.display = 'none';
+            document.getElementById('interface').style.display = 'block';
+
+            setTimeout(() => speak(qVal), 500);
+        }
+
+        function speakText(side) {
+            speak(side === 'left' ? lVal : rVal);
+        }
+
+        function exitInterface() {
+            document.getElementById('setup-zone').style.display = 'flex';
+            document.getElementById('interface').style.display = 'none';
+        }
+
+        // 解決部分行動裝置瀏覽器不給自動播音的問題：在第一次點擊時啟動引擎
+        document.body.addEventListener('click', function() {
+            const temp = new SpeechSynthesisUtterance("");
+            window.speechSynthesis.speak(temp);
+        }, { once: true });
+    </script>
+</body>
+</html>
