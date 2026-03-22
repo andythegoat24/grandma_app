@@ -3,41 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>阿嬤溝通板-語音修正版</title>
+    <title>阿嬤溝通板-iOS穩定版</title>
     <style>
         :root { --yes-color: #28a745; --no-color: #dc3545; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body, html { margin: 0; padding: 0; height: 100%; width: 100%; font-family: sans-serif; overflow: hidden; background: #f8f9fa; }
         
-        #setup-zone { 
-            padding: 20px; display: flex; flex-direction: column; gap: 15px; 
-            height: 100%; overflow-y: auto; justify-content: center; max-width: 500px; margin: 0 auto; 
-        }
+        /* 設定模式 */
+        #setup-zone { padding: 20px; display: flex; flex-direction: column; gap: 15px; height: 100%; justify-content: center; max-width: 500px; margin: 0 auto; }
         .input-group { display: flex; flex-direction: column; gap: 5px; }
-        label { font-size: 1.1rem; font-weight: bold; }
-        input { padding: 12px; font-size: 1.2rem; border: 2px solid #6f42c1; border-radius: 8px; width: 100%; }
-        #start-btn { 
-            margin-top: 10px; padding: 20px; font-size: 1.5rem; 
-            background: #6f42c1; color: white; border: none; border-radius: 15px; 
-            cursor: pointer; font-weight: bold; 
+        input { padding: 15px; font-size: 1.2rem; border: 3px solid #6f42c1; border-radius: 10px; }
+        #start-btn { padding: 20px; font-size: 1.5rem; background: #6f42c1; color: white; border: none; border-radius: 15px; font-weight: bold; }
+
+        /* 溝通介面 */
+        #interface { display: none; height: 100vh; width: 100vw; position: fixed; top: 0; left: 0; z-index: 100; background: black; }
+        
+        /* 問題區域：點了才會唸問題 */
+        #question-bar { 
+            height: 20%; background: #333; color: #fff; display: flex; align-items: center; 
+            justify-content: center; font-size: 5vw; padding: 10px; text-align: center;
+            border-bottom: 2px solid #555;
         }
 
-        #interface { display: none; height: 100vh; width: 100vw; position: fixed; top: 0; left: 0; z-index: 100; background: white; }
-        .btn-container { display: flex; height: 100%; width: 100%; flex-direction: row; }
-        .btn-half { 
-            flex: 1 1 50%; display: flex; align-items: center; justify-content: center; 
-            font-weight: bold; color: white; text-align: center; padding: 15px; 
-        }
-        .btn-half span { font-size: clamp(35px, 12vw, 100px); line-height: 1.2; display: block; width: 100%; word-wrap: break-word; }
-        #left-side { background-color: var(--yes-color); border: 4px solid white; }
-        #right-side { background-color: var(--no-color); border: 4px solid white; }
+        .btn-container { display: flex; height: 80%; width: 100%; }
+        .btn-half { flex: 1; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; text-align: center; padding: 15px; }
+        .btn-half span { font-size: clamp(40px, 12vw, 100px); line-height: 1.2; }
+        
+        #left-side { background-color: var(--yes-color); border-right: 4px solid white; }
+        #right-side { background-color: var(--no-color); }
 
+        /* 手機直立模式 */
         @media screen and (max-width: 500px) and (orientation: portrait) {
-            .btn-container { flex-direction: column; }
-            .btn-half { flex: 1 1 50%; width: 100%; }
-            .btn-half span { font-size: clamp(45px, 18vw, 120px); }
+            #question-bar { font-size: 7vw; height: 25%; }
+            .btn-container { flex-direction: column; height: 75%; }
+            #left-side { border-right: none; border-bottom: 4px solid white; }
         }
-        .back-btn { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); padding: 8px 25px; background: rgba(0,0,0,0.7); color: white; border-radius: 20px; z-index: 101; }
+
+        .back-btn { position: absolute; top: 10px; right: 10px; padding: 5px 15px; background: rgba(255,255,255,0.2); color: white; border-radius: 10px; font-size: 0.8rem; border: 1px solid white; }
     </style>
 </head>
 <body>
@@ -49,68 +51,60 @@
             <input type="text" id="q-input" value="阿嬤，你要喝水嗎？">
         </div>
         <div class="input-group">
-            <label>左邊/上面 文字：</label>
+            <label>左邊文字：</label>
             <input type="text" id="l-input" value="要喝">
         </div>
         <div class="input-group">
-            <label>右邊/下面 文字：</label>
+            <label>右邊文字：</label>
             <input type="text" id="r-input" value="不喝">
         </div>
-        <button id="start-btn" onclick="initAndStart()">進入溝通模式</button>
+        <button id="start-btn" onclick="start()">進入溝通模式</button>
     </div>
 
     <div id="interface">
-        <button class="back-btn" onclick="exitInterface()">⬅ 返回修改</button>
+        <div id="question-bar" onclick="playQuestion()">
+            <span id="q-text">問題加載中...</span>
+            <span style="font-size: 0.8rem; display: block; opacity: 0.7;">(點我唸問題)</span>
+        </div>
+        <button class="back-btn" onclick="exit()">返回</button>
         <div class="btn-container">
-            <div id="left-side" class="btn-half" onclick="speakLeft()"><span id="left-text"></span></div>
-            <div id="right-side" class="btn-half" onclick="speakRight()"><span id="right-text"></span></div>
+            <div id="left-side" class="btn-half" onclick="playLeft()"><span id="left-text"></span></div>
+            <div id="right-side" class="btn-half" onclick="playRight()"><span id="right-text"></span></div>
         </div>
     </div>
 
     <script>
-        let q, l, r;
-        const synth = window.speechSynthesis;
+        let qVal, lVal, rVal;
 
-        // 核心修正：強制解鎖語音引擎
-        function unlockAudio() {
-            const silent = new SpeechSynthesisUtterance("");
-            synth.speak(silent);
-        }
-
-        function playVoice(text) {
+        function play(text) {
             if (!text) return;
-            synth.cancel(); // 停止目前所有聲音
+            window.speechSynthesis.cancel();
             const u = new SpeechSynthesisUtterance(text);
             u.lang = 'zh-TW';
-            u.rate = 0.7; // 慢速
-            u.pitch = 1.0;
-            synth.speak(u);
+            u.rate = 0.7;
+            window.speechSynthesis.speak(u);
         }
 
-        function initAndStart() {
-            // 1. 先解鎖語音
-            unlockAudio();
+        function start() {
+            // iOS 關鍵：在使用者點擊按鈕的這一瞬間，播放一段空聲音來解鎖
+            window.speechSynthesis.speak(new SpeechSynthesisUtterance(""));
             
-            // 2. 獲取數值
-            q = document.getElementById('q-input').value;
-            l = document.getElementById('l-input').value;
-            r = document.getElementById('r-input').value;
+            qVal = document.getElementById('q-input').value;
+            lVal = document.getElementById('l-input').value;
+            rVal = document.getElementById('r-input').value;
             
-            document.getElementById('left-text').innerText = l;
-            document.getElementById('right-text').innerText = r;
+            document.getElementById('q-text').innerText = qVal;
+            document.getElementById('left-text').innerText = lVal;
+            document.getElementById('right-text').innerText = rVal;
             
-            // 3. 切換畫面
             document.getElementById('setup-zone').style.display = 'none';
             document.getElementById('interface').style.display = 'block';
-            
-            // 4. 唸出問題
-            setTimeout(() => playVoice(q), 500);
         }
 
-        function speakLeft() { playVoice(l); }
-        function speakRight() { playVoice(r); }
-
-        function exitInterface() {
+        function playQuestion() { play(qVal); }
+        function playLeft() { play(lVal); }
+        function playRight() { play(rVal); }
+        function exit() {
             document.getElementById('setup-zone').style.display = 'flex';
             document.getElementById('interface').style.display = 'none';
         }
